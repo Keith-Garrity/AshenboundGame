@@ -2,7 +2,7 @@ package io.github.some_example_name;
 
 public class Mage extends CharacterClass{
     public Mage() {
-        super(0, "Knight", 60, 4, 5, "A fragile spellcaster who is attuned with elemental energy.");
+        super(0, "Mage", 60, 4, 5, "A fragile spellcaster who is attuned with elemental energy.");
     }
 
     @Override

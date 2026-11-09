@@ -11,6 +11,8 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.InputAdapter;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
@@ -37,6 +39,7 @@ public class Main extends ApplicationAdapter {
     private Button nameButton;
     private Button createCharacterButton;
     private Button backButton;
+    private Button randomNameButton;
 
     private Button newGameButton;
     private Button loadGameButton;
@@ -46,6 +49,8 @@ public class Main extends ApplicationAdapter {
     private boolean inGame = false;   // false = title screen, true = game screen
     private boolean paused = false;
     private PauseMenu pauseMenu;
+    private boolean typingName = false;
+
 
     @Override
     public void create() {
@@ -67,13 +72,37 @@ public class Main extends ApplicationAdapter {
         mageButton = new Button("Mage", font, 0.25f, 0.27f);
         rogueButton = new Button("Rogue", font, 0.25f, 0.19f);
 
-        maleButton = new Button("Male", font, 0.65f, 0.35f);
-        femaleButton = new Button("Female", font, 0.65f, 0.27f);
-        nameButton = new Button("Enter Name", font, 0.65f, 0.19f);
+        maleButton = new Button("Male", font, 0.75f, 0.35f);
+        femaleButton = new Button("Female", font, 0.75f, 0.27f);
+        nameButton = new Button("Enter Name", font, 0.75f, 0.19f);
         createCharacterButton = new Button("Create Character", font, 0.5f, 0.08f);
         backButton = new Button("Back", font, 0.08f, 0.08f);
+        typingName = false;
+        randomNameButton = new Button("Random Name", font, 0.75f, 0.11f);
 
         pauseMenu = new PauseMenu(font);
+        Gdx.input.setInputProcessor(new InputAdapter() {
+            public boolean keyDown(int keycode) {
+                if (!typingName) return false;
+                if (keycode == Input.Keys.BACKSPACE && !playerName.isEmpty()) {
+                    playerName = playerName.substring(0, playerName.length() - 1);
+                    return true;
+                }
+                if (keycode == Input.Keys.ENTER || keycode == Input.Keys.ESCAPE) {
+                    typingName = false;                  // Enter or Esc finishes typing
+                    return true;
+                }
+                return false;
+            }
+            public boolean keyTyped(char c) {
+                if (!typingName) return false;
+                if (c >= 32 && c < 127 && playerName.length() < 16) {   // letters, numbers, spaces; max 16
+                    playerName += c;
+                    return true;
+                }
+                return false;
+            }
+        });
     }
 
     public void resize(int width, int height) {
@@ -86,6 +115,7 @@ public class Main extends ApplicationAdapter {
         }
         String imagePath = "characters/" + selectedClass.getName().toLowerCase()
             + "_" + selectedGender.name().toLowerCase() + ".png";
+        System.out.println("Loading portrait: " + imagePath);     // DEBUG
         portrait = new Texture(imagePath);
     }
 
@@ -94,18 +124,17 @@ public class Main extends ApplicationAdapter {
         font.draw(batch, "CREATE YOUR CHARACTER", 650, 1000);
         font.draw(batch, "Choose Your Class:", 250, 850);
         font.draw(batch, "Choose Your Gender:", 1100, 850);
-        font.draw(batch, "Name: " +
-                (playerName.isEmpty() ? "Not Selected" : playerName),
-            1050, 700);
-
+        String cursor = (typingName && (System.currentTimeMillis() / 500) % 2 == 0) ? "_" : "";
+        font.setColor(Color.WHITE);
+        font.draw(batch, "Name: " + playerName + cursor, 0, 270, 1920, Align.center, false);
         // Draw character portrait
         if (portrait != null) {
-            batch.draw(portrait, 700, 300, 350, 450);
+            batch.draw(portrait, 725, 300, 300, 450);
         }
-
         knightButton.draw(batch);
         mageButton.draw(batch);
         rogueButton.draw(batch);
+        randomNameButton.draw(batch);
 
         maleButton.draw(batch);
         femaleButton.draw(batch);
@@ -115,32 +144,38 @@ public class Main extends ApplicationAdapter {
     }
 
     private void updateCharacterCreation() {
+        nameButton.setSelected(typingName);
+        knightButton.setSelected(selectedClass instanceof Knight);
+        mageButton.setSelected(selectedClass instanceof Mage);
+        rogueButton.setSelected(selectedClass instanceof Rogue);
+        maleButton.setSelected(selectedGender == Gender.MALE);
+        femaleButton.setSelected(selectedGender == Gender.FEMALE);
+        if (knightButton.update(viewport)) {
+            selectedClass = new Knight();
+            updatePortrait();
+        }
+        if (mageButton.update(viewport)) {
+            selectedClass = new Mage();
+            updatePortrait();
+        }
+        if (rogueButton.update(viewport)) {
+            selectedClass = new Rogue();
+            updatePortrait();
+        }
         if (maleButton.update(viewport)) {
             selectedGender = Gender.MALE;
             updatePortrait();
         }
-
         if (femaleButton.update(viewport)) {
             selectedGender = Gender.FEMALE;
             updatePortrait();
         }
-
         if (nameButton.update(viewport)) {
-            Gdx.input.getTextInput(
-                new Input.TextInputListener() {
-                    @Override
-                    public void input(String text) {
-                        playerName = text.trim();
-                    }
-
-                    @Override
-                    public void canceled() {
-                    }
-                },
-                "Character Name",
-                playerName,
-                "Enter your character's name"
-            );
+            typingName = !typingName;                    // click to start or stop typing
+        }
+        if (randomNameButton.update(viewport)) {
+            playerName = NameGenerator.randomName(selectedGender);
+            typingName = false;
         }
 
         if (createCharacterButton.update(viewport)) {
@@ -157,6 +192,7 @@ public class Main extends ApplicationAdapter {
 
             characterCreation = false;
             inGame = true;
+            paused = false;
 
             System.out.println("Created character: " + player.getName());
         }
@@ -172,6 +208,7 @@ public class Main extends ApplicationAdapter {
         ScreenUtils.clear(0.12f, 0.04f, 0.03f, 1f);
         viewport.apply();
         batch.setProjectionMatrix(viewport.getCamera().combined);
+        // ---------- LOGIC ----------
         if (characterCreation) {
             updateCharacterCreation();
         } else if (!inGame) {
@@ -179,7 +216,8 @@ public class Main extends ApplicationAdapter {
                 characterCreation = true;
                 selectedClass = new Knight();
                 selectedGender = Gender.MALE;
-                playerName = "";
+                playerName = NameGenerator.randomName(selectedGender);
+                typingName = false;
                 updatePortrait();
             }
             if (loadGameButton.update(viewport)) {
@@ -194,7 +232,7 @@ public class Main extends ApplicationAdapter {
         } else {
             // game screen
             if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-                paused = !paused;                       // the ONLY place Esc is handled
+                paused = !paused;
             }
             if (paused) {
                 if (pauseMenu.continueButton.update(viewport)) {
@@ -211,34 +249,23 @@ public class Main extends ApplicationAdapter {
                     System.out.println("Pause Settings clicked!");
                 }
             }
-
         }
+
+        // ---------- DRAWING ----------
         batch.begin();
-        if (!inGame) {
-            /* ---- Main Menu ------ */
+        if (characterCreation) {
+            batch.draw(gameBackground, 0, 0, 1920, 1080);
+            drawCharacterCreation();
+        } else if (!inGame) {
             batch.draw(image, 0, 0, 1920, 1080);
             newGameButton.draw(batch);
             loadGameButton.draw(batch);
             settingsButton.draw(batch);
             quitButton.draw(batch);
         } else {
-            /* ----- New Game Screen AS of Now ----- */
             batch.draw(gameBackground, 0, 0, 1920, 1080);
             font.setColor(Color.WHITE);
             font.draw(batch, "Game screen - press Esc to open the pause menu", 60, 1020);
-
-            if (knightButton.update(viewport)) {
-                selectedClass = new Knight();
-                updatePortrait();
-            }
-            if (mageButton.update(viewport)) {
-                selectedClass = new Mage();
-                updatePortrait();
-            }
-            if (rogueButton.update(viewport)) {
-                selectedClass = new Rogue();
-                updatePortrait();
-            }
             if (paused) {
                 pauseMenu.draw(batch);
             }
@@ -253,6 +280,9 @@ public class Main extends ApplicationAdapter {
         gameBackground.dispose();
         font.dispose();
         pauseMenu.dispose();
+        if (portrait != null) {
+            portrait.dispose();
+        }
     }
 }
 
