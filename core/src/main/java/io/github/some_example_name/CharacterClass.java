@@ -1,4 +1,5 @@
 package io.github.some_example_name;
+import java.util.List;
 /** Base class for the playable classes.
  * Each class (Knight, Mage, Rogue) fills in its own stats. */
 public abstract class CharacterClass {
@@ -19,6 +20,8 @@ public abstract class CharacterClass {
     }
     /** Each class describes its own special ability. */
     public abstract String getSpecialAbility();
+    /** The four abilities this class can choose from in combat. */
+    public abstract List<Ability> getAbilities();
 
     /** Turns a ClassType number from the database into the right class. */
     public static CharacterClass fromId(int id) {

@@ -2,7 +2,7 @@ package io.github.some_example_name;
 
 public class Bandit extends Enemy {
     public Bandit() {
-        super("Bandit", 90, 5, 2,
+        super("Bandit", 90, 9, 2,
             "A low-level thug with a rusty blade.");
     }
     public String getMoveName(int turn) {
