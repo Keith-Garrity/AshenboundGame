@@ -41,6 +41,13 @@ public class Main extends ApplicationAdapter {
     private Button backButton;
     private Button randomNameButton;
 
+    private Enemy enemy;
+    private Texture enemyTexture;
+    private boolean inCombat = false;
+    private Combat combat = null;
+    private Button combatDoneButton;
+    private Button[] abilityButtons = new Button[4];
+
     private Button newGameButton;
     private Button loadGameButton;
     private Button settingsButton;
@@ -79,6 +86,15 @@ public class Main extends ApplicationAdapter {
         backButton = new Button("Back", font, 0.08f, 0.08f);
         typingName = false;
         randomNameButton = new Button("Random Name", font, 0.75f, 0.11f);
+
+        combatDoneButton = new Button("Continue", font, 0.5f, 0.12f);
+        combatDoneButton.setBoxSize(360, 72);
+
+        /* Attack Screen */
+        for (int i = 0; i < abilityButtons.length; i++) {
+            abilityButtons[i] = new Button("", font, 0.2f + i * 0.2f, 0.12f);   // spread across the bottom
+            abilityButtons[i].setBoxSize(360, 72);
+        }
 
         pauseMenu = new PauseMenu(font);
         Gdx.input.setInputProcessor(new InputAdapter() {
@@ -203,6 +219,81 @@ public class Main extends ApplicationAdapter {
         }
     }
 
+    private void startCombat(Enemy enemy) {
+        // Initialize combat FIRST
+        combat = new Combat(player, enemy);
+        // Load enemy image
+        enemyTexture = new Texture(enemy.getImagePath());
+        // Switch to combat screen LAST
+        inCombat = true;
+        System.out.println("Combat started against " + enemy.getName());
+    }
+
+    private void drawCombat() {
+        if (combat == null) {
+            System.out.println("ERROR: Combat screen opened without a Combat object!");
+            return;
+        }
+        batch.draw(gameBackground, 0, 0, 1920, 1080);
+        font.setColor(Color.WHITE);
+        font.draw(batch, "COMBAT - Turn " + combat.getTurn(), 0, 1020, 1920, Align.center, false);
+
+        // player on the left
+        if (portrait != null) {
+            batch.draw(portrait, 250, 520, 300, 450);
+        }
+        font.draw(batch, player.getName(), 100, 500, 600, Align.center, false);
+        font.draw(batch, "HP " + player.getHealth() + "/" + player.getMaxHealth(), 100, 455, 600, Align.center, false);
+        font.draw(batch, "Block " + combat.getPlayerBlock(), 100, 410, 600, Align.center, false);
+
+        // enemy on the right (text only for now)
+        Enemy enemy = combat.getEnemy();
+        if (enemyTexture != null) {
+            batch.draw(enemyTexture, 1300, 430, 300, 400);
+        }
+        font.draw(batch, enemy.getName(), 1220, 850, 600, Align.center, false);
+        font.draw(batch, "HP " + enemy.getHealth() + "/" + enemy.getMaxHealth(), 1220, 795, 600, Align.center, false);
+        if (!combat.isOver()) {
+            font.draw(batch, "Next: " + combat.getEnemyIntent(), 1220, 740, 600, Align.center, false);
+        }
+
+        // what just happened
+        float y = 350;
+        for (String line : combat.getRecentLog()) {
+            font.draw(batch, line, 0, y, 1920, Align.center, false);
+            y -= 45;
+        }
+        if (combat.isOver()) {
+            font.setColor(combat.playerWon() ? Color.GOLD : Color.RED);
+            font.draw(batch, combat.playerWon() ? "VICTORY!" : "DEFEAT",
+                0, 640, 1920, Align.center, false);
+
+            combatDoneButton.draw(batch);
+        }
+
+    }
+
+    private void updateCombat() {
+        if (!combat.isOver()) {
+            for (int i = 0; i < abilityButtons.length; i++) {
+                Ability ability = combat.getAbilities().get(i);
+                int cooldown = combat.getCooldownLeft(i);
+                abilityButtons[i].setText(cooldown > 0 ? ability.getName() + " (" + cooldown + ")"
+                    : ability.getName());
+                abilityButtons[i].setDisabled(cooldown > 0);
+                if (abilityButtons[i].update(viewport)) {
+                    combat.useAbility(i);
+                }
+            }
+        } else if (combatDoneButton.update(viewport)) {
+            inCombat = false;
+            if (!combat.playerWon()) {
+                inGame = false;               // you lost: back to the title screen
+            }
+        }
+
+    }
+
     @Override
     public void render() {
         ScreenUtils.clear(0.12f, 0.04f, 0.03f, 1f);
@@ -229,8 +320,13 @@ public class Main extends ApplicationAdapter {
             if (quitButton.update(viewport)) {
                 Gdx.app.exit();
             }
-        } else {
-            // game screen
+        } else if (inCombat){
+            updateCombat();
+        }
+        {// game screen
+            if (Gdx.input.isKeyJustPressed(Input.Keys.C)) {
+                startCombat(new Wolf());
+            }
             if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
                 paused = !paused;
             }
@@ -262,10 +358,11 @@ public class Main extends ApplicationAdapter {
             loadGameButton.draw(batch);
             settingsButton.draw(batch);
             quitButton.draw(batch);
+        } else if (inCombat) {
+            drawCombat();
         } else {
+            // Normal gameplay screen
             batch.draw(gameBackground, 0, 0, 1920, 1080);
-            font.setColor(Color.WHITE);
-            font.draw(batch, "Game screen - press Esc to open the pause menu", 60, 1020);
             if (paused) {
                 pauseMenu.draw(batch);
             }
@@ -282,6 +379,9 @@ public class Main extends ApplicationAdapter {
         pauseMenu.dispose();
         if (portrait != null) {
             portrait.dispose();
+        }
+        if (enemyTexture != null) {
+            enemyTexture.dispose();
         }
     }
 }

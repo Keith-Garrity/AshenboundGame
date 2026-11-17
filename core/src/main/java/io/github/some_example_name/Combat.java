@@ -90,7 +90,7 @@ public class Combat {
 
     // ---------- information for the screen ----------
 
-    /** What the enemy will do next */
+    /** What the enemy will do next, e.g. "Lunge (12)". Shown so the player can plan. */
     public String getEnemyIntent() {
         int damage = enemy.getMoveDamage(turn);
         return enemy.getMoveName(turn) + (damage > 0 ? " (" + damage + ")" : " (no attack)");

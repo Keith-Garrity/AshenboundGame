@@ -16,11 +16,13 @@ public class Button {
 
     private static final Color BORDER          = new Color(0.60f, 0.45f, 0.25f, 1f);
     private static final Color BORDER_SELECTED = new Color(1.00f, 0.85f, 0.40f, 1f);
+    private static final Color BORDER_DISABLED = new Color(0.30f, 0.30f, 0.30f, 1f);
     private static final Color FILL            = new Color(0.10f, 0.08f, 0.12f, 0.92f);
     private static final Color FILL_HOVER      = new Color(0.24f, 0.18f, 0.30f, 0.95f);
     private static final Color FILL_SELECTED   = new Color(0.42f, 0.30f, 0.12f, 0.95f);
+    private static final Color FILL_DISABLED   = new Color(0.07f, 0.07f, 0.07f, 0.92f);
 
-    private final String text;
+    private String text;
     private final BitmapFont font;
     private final float xFraction;   // 0 = left, 0.5 = center, 1 = right
     private final float yFraction;   // 0 = bottom, 1 = top
@@ -33,6 +35,7 @@ public class Button {
     private float textX, textY;      // where the text is drawn
     private boolean hovering;
     private boolean selected;
+    private boolean disabled;
 
     public Button(String text, BitmapFont font, float xFraction, float yFraction) {
         this.text = text;
@@ -41,15 +44,13 @@ public class Button {
         this.yFraction = yFraction;
     }
 
-    public void setBoxSize(float width, float height) {
-        this.boxWidth = width;
-        this.boxHeight = height;
-    }
-
-    /** A selected button is drawn gold (used for the chosen class and gender). */
-    public void setSelected(boolean selected) {
-        this.selected = selected;
-    }
+    public void setText(String text) { this.text = text; }
+    public void setBoxSize(float width, float height) { this.boxWidth = width; this.boxHeight = height; }
+    public void setSelected(boolean selected) { this.selected = selected; }
+    /** A disabled button is greyed out and can't be clicked. */
+    public void setDisabled(boolean disabled) { this.disabled = disabled; }
+    /** True while the mouse is over the box (also true when disabled). */
+    public boolean isHovering() { return hovering; }
 
     /** Call every frame. Returns true on the frame the button is clicked. */
     public boolean update(Viewport viewport) {
@@ -66,7 +67,7 @@ public class Button {
         hovering = mouse.x >= centerX - boxWidth / 2f && mouse.x <= centerX + boxWidth / 2f
             && mouse.y >= centerY - boxHeight / 2f && mouse.y <= centerY + boxHeight / 2f;
 
-        return hovering && Gdx.input.justTouched();
+        return hovering && !disabled && Gdx.input.justTouched();
     }
 
     /** Call between batch.begin() and batch.end(). */
@@ -82,14 +83,18 @@ public class Button {
         float left = centerX - boxWidth / 2f;
         float bottom = centerY - boxHeight / 2f;
 
-        batch.setColor(selected ? BORDER_SELECTED : BORDER);                  // border
-        batch.draw(pixel, left - 3, bottom - 3, boxWidth + 6, boxHeight + 6);
+        Color border = disabled ? BORDER_DISABLED : (selected ? BORDER_SELECTED : BORDER);
+        Color fill = disabled ? FILL_DISABLED
+            : (selected ? FILL_SELECTED : (hovering ? FILL_HOVER : FILL));
 
-        batch.setColor(selected ? FILL_SELECTED : (hovering ? FILL_HOVER : FILL));   // box
+        batch.setColor(border);
+        batch.draw(pixel, left - 3, bottom - 3, boxWidth + 6, boxHeight + 6);
+        batch.setColor(fill);
         batch.draw(pixel, left, bottom, boxWidth, boxHeight);
         batch.setColor(Color.WHITE);                                          // reset the tint
 
-        font.setColor(selected ? BORDER_SELECTED : (hovering ? Color.YELLOW : Color.WHITE));
+        font.setColor(disabled ? Color.GRAY
+            : (selected ? BORDER_SELECTED : (hovering ? Color.YELLOW : Color.WHITE)));
         font.draw(batch, text, textX, textY);
     }
 
