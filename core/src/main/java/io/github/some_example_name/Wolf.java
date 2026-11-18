@@ -2,7 +2,7 @@ package io.github.some_example_name;
 
 public class Wolf extends Enemy{
     public Wolf() {
-        super("Wolf", 50, 12, 0,
+        super("Wolf", 50, 6, 0,
             "A hungry wolf. Weak, but its bite hits hard.");
     }
     @Override

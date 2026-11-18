@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.graphics.Pixmap;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
@@ -58,12 +59,21 @@ public class Main extends ApplicationAdapter {
     private PauseMenu pauseMenu;
     private boolean typingName = false;
 
+    private Texture pixel;
+
 
     @Override
     public void create() {
         batch = new SpriteBatch();
         image = new Texture("ashenbound_title.png");
         gameBackground = new Texture("ashenbound_title_bg.png");
+
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.WHITE);
+        pixmap.fill();
+        pixel = new Texture(pixmap);
+        pixmap.dispose();
+
         font = new BitmapFont();
         font.getData().setScale(3f);
         viewport = new FitViewport(1920, 1080);
@@ -229,48 +239,112 @@ public class Main extends ApplicationAdapter {
         System.out.println("Combat started against " + enemy.getName());
     }
 
+    private void drawHealthBar(float x, float y, float width, float height,
+                               int currentHealth, int maxHealth, Color barColor) {
+        float percentage = Math.max(0f,
+            Math.min(1f, (float) currentHealth / maxHealth));
+        // Background of health bar
+        batch.setColor(Color.DARK_GRAY);
+        batch.draw(pixel, x, y, width, height);
+        // Current health
+        batch.setColor(barColor);
+        batch.draw(pixel, x, y, width * percentage, height);
+        batch.setColor(Color.WHITE);
+    }
+
+    private void drawPanel(float x, float y, float width, float height) {
+        batch.setColor(0.04f, 0.05f, 0.09f, 0.88f);
+        batch.draw(pixel, x, y, width, height);
+        batch.setColor(Color.WHITE);
+    }
+
     private void drawCombat() {
         if (combat == null) {
-            System.out.println("ERROR: Combat screen opened without a Combat object!");
             return;
         }
-        batch.draw(gameBackground, 0, 0, 1920, 1080);
-        font.setColor(Color.WHITE);
-        font.draw(batch, "COMBAT - Turn " + combat.getTurn(), 0, 1020, 1920, Align.center, false);
-
-        // player on the left
-        if (portrait != null) {
-            batch.draw(portrait, 250, 520, 300, 450);
-        }
-        font.draw(batch, player.getName(), 100, 500, 600, Align.center, false);
-        font.draw(batch, "HP " + player.getHealth() + "/" + player.getMaxHealth(), 100, 455, 600, Align.center, false);
-        font.draw(batch, "Block " + combat.getPlayerBlock(), 100, 410, 600, Align.center, false);
-
-        // enemy on the right (text only for now)
         Enemy enemy = combat.getEnemy();
+        // Background
+        batch.draw(gameBackground, 0, 0, 1920, 1080);
+        // Dark overlay
+        batch.setColor(0.02f, 0.02f, 0.05f, 0.65f);
+        batch.draw(pixel, 0, 0, 1920, 1080);
+        batch.setColor(Color.WHITE);
+        // Title
+        font.setColor(Color.GOLD);
+        font.draw(batch, "BATTLE - TURN " + combat.getTurn(),
+            0, 1010, 1920, Align.center, false);
+        // Character panels
+        drawPanel(120, 280, 650, 650);
+        drawPanel(1150, 280, 650, 650);
+        // Player portrait
+        if (portrait != null) {
+            batch.draw(portrait, 275, 390, 340, 450);
+        }
+        // Enemy artwork
         if (enemyTexture != null) {
-            batch.draw(enemyTexture, 1300, 430, 300, 400);
+            batch.draw(enemyTexture, 1310, 390, 340, 450);
         }
-        font.draw(batch, enemy.getName(), 1220, 850, 600, Align.center, false);
-        font.draw(batch, "HP " + enemy.getHealth() + "/" + enemy.getMaxHealth(), 1220, 795, 600, Align.center, false);
+        // Player information
+        font.setColor(Color.WHITE);
+        font.draw(batch, player.getName(), 120, 875, 650,
+            Align.center, false);
+        font.draw(batch, "HP: " + player.getHealth() + "/"
+            + player.getMaxHealth(), 170, 355);
+        drawHealthBar(170, 290, 550, 22,
+            player.getHealth(), player.getMaxHealth(), Color.GREEN);
+        font.draw(batch, "BLOCK: " + combat.getPlayerBlock(),
+            170, 290);
+        // Enemy information
+        font.setColor(Color.WHITE);
+        font.draw(batch, enemy.getName(), 1150, 875, 650,
+            Align.center, false);
+        font.draw(batch, "HP: " + enemy.getHealth() + "/"
+            + enemy.getMaxHealth(), 1200, 355);
+        drawHealthBar(1200, 290, 550, 22,
+            enemy.getHealth(), enemy.getMaxHealth(), Color.RED);
+        // Enemy intent
         if (!combat.isOver()) {
-            font.draw(batch, "Next: " + combat.getEnemyIntent(), 1220, 740, 600, Align.center, false);
+            drawPanel(650, 790, 620, 90);
+            font.setColor(Color.ORANGE);
+            font.draw(batch, "ENEMY INTENT", 650, 855, 620,
+                Align.center, false);
+            font.setColor(Color.WHITE);
+            font.draw(batch, combat.getEnemyIntent(), 650, 815, 620,
+                Align.center, false);
         }
-
-        // what just happened
-        float y = 350;
+        // Combat log
+        drawPanel(650, 430, 620, 250);
+        font.setColor(Color.GOLD);
+        font.draw(batch, "COMBAT LOG", 650, 650, 620,
+            Align.center, false);
+        font.setColor(Color.WHITE);
+        float logY = 600;
         for (String line : combat.getRecentLog()) {
-            font.draw(batch, line, 0, y, 1920, Align.center, false);
-            y -= 45;
+            font.draw(batch, line, 670, logY, 580,
+                Align.center, false);
+            logY -= 55;
         }
+        // Ability buttons
+        if (!combat.isOver()) {
+            int abilityCount = Math.min(
+                abilityButtons.length,
+                combat.getAbilities().size()
+            );
+            for (int i = 0; i < abilityCount; i++) {
+                abilityButtons[i].draw(batch);
+            }
+        }
+        // Victory or defeat
         if (combat.isOver()) {
+            drawPanel(600, 430, 720, 220);
             font.setColor(combat.playerWon() ? Color.GOLD : Color.RED);
-            font.draw(batch, combat.playerWon() ? "VICTORY!" : "DEFEAT",
-                0, 640, 1920, Align.center, false);
-
+            font.draw(batch,
+                combat.playerWon() ? "VICTORY!" : "DEFEAT",
+                600, 590, 720, Align.center, false);
+            font.setColor(Color.WHITE);
             combatDoneButton.draw(batch);
         }
-
+        font.setColor(Color.WHITE);
     }
 
     private void updateCombat() {
@@ -382,6 +456,9 @@ public class Main extends ApplicationAdapter {
         }
         if (enemyTexture != null) {
             enemyTexture.dispose();
+        }
+        if (pixel != null) {
+            pixel.dispose();
         }
     }
 }
