@@ -397,7 +397,7 @@ public class Main extends ApplicationAdapter {
         } else if (inCombat){
             updateCombat();
         }
-        {// game screen
+        else { // game screen
             if (Gdx.input.isKeyJustPressed(Input.Keys.C)) {
                 startCombat(new Wolf());
             }
