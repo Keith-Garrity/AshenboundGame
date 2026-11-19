@@ -4,7 +4,7 @@ import java.util.List;
 
 public class Rogue extends CharacterClass{
     public Rogue() {
-        super(0, "Rogue", 75, 3, 6, "A quick fighter who plays many cheap cards..");
+        super(0, "Rogue", 75, 3, 6, "A quick fighter who plays many fast cards..");
     }
 
     @Override
@@ -18,7 +18,7 @@ public class Rogue extends CharacterClass{
             new Ability("Stab",     "Deal 6 damage.",                   6, 0, 0, 0),
             new Ability("Backstab", "Deal 12 damage.",                 12, 0, 0, 2),
             new Ability("Dodge",    "Gain 7 Block.",                    0, 7, 0, 0),
-            new Ability("Bandage",  "Heal 6 HP.",                       0, 0, 6, 3)
+            new Ability("Bandage",  "Heal 6 HP.",                       0, 0, 6, 2)
         );
     }
 }

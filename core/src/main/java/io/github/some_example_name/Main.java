@@ -41,6 +41,7 @@ public class Main extends ApplicationAdapter {
     private Button createCharacterButton;
     private Button backButton;
     private Button randomNameButton;
+    private Button beginAdventureButton;
 
     private Enemy enemy;
     private Texture enemyTexture;
@@ -60,6 +61,7 @@ public class Main extends ApplicationAdapter {
     private boolean typingName = false;
 
     private Texture pixel;
+    private boolean characterOverview = false;
 
 
     @Override
@@ -96,6 +98,8 @@ public class Main extends ApplicationAdapter {
         backButton = new Button("Back", font, 0.08f, 0.08f);
         typingName = false;
         randomNameButton = new Button("Random Name", font, 0.75f, 0.11f);
+        beginAdventureButton = new Button("Begin Adventure", font, 0.5f, 0.11f);
+        beginAdventureButton.setBoxSize(400, 80);
 
         combatDoneButton = new Button("Continue", font, 0.5f, 0.12f);
         combatDoneButton.setBoxSize(360, 72);
@@ -217,7 +221,8 @@ public class Main extends ApplicationAdapter {
             }
 
             characterCreation = false;
-            inGame = true;
+            characterOverview = true;
+            inGame = false;
             paused = false;
 
             System.out.println("Created character: " + player.getName());
@@ -227,6 +232,102 @@ public class Main extends ApplicationAdapter {
             characterCreation = false;
             inGame = false;
         }
+    }
+
+    private void drawCharacterOverview() {
+        batch.setColor(Color.BLACK);
+        batch.draw(pixel, 0, 0, 1920, 1080);
+        batch.setColor(Color.WHITE);
+        // Make text smaller for the overview screen
+        font.getData().setScale(2f);
+        // Character portrait
+        if (portrait != null) {
+            batch.draw(portrait, 150, 300, 400, 550);
+        }
+        // Character information
+        font.setColor(Color.GOLD);
+        font.draw(batch, "CHARACTER OVERVIEW", 700, 950);
+        font.setColor(Color.WHITE);
+        font.draw(batch, "Name: " + player.getName(), 700, 870);
+        font.draw(batch, "Class: "
+            + player.getCharacterClass().getName(), 700, 820);
+        font.draw(batch, "Level: " + player.getLevel(), 700, 770);
+        font.draw(batch, "Health: " + player.getHealth()
+            + "/" + player.getMaxHealth(), 700, 720);
+        // Class description
+        font.setColor(Color.GOLD);
+        font.draw(batch, "CLASS DESCRIPTION", 700, 650);
+        font.setColor(Color.WHITE);
+        GlyphLayout descriptionLayout = new GlyphLayout();
+        descriptionLayout.setText(
+            font,
+            player.getCharacterClass().getDescription(),
+            Color.WHITE,
+            1050,
+            Align.left,
+            true
+        );
+        font.draw(batch, descriptionLayout, 700, 610);
+        // Unique class ability
+        font.setColor(Color.GOLD);
+        font.draw(batch, "SPECIAL ABILITY", 700, 500);
+        font.setColor(Color.WHITE);
+        GlyphLayout specialAbilityLayout = new GlyphLayout();
+        specialAbilityLayout.setText(
+            font,
+            player.getCharacterClass().getSpecialAbility(),
+            Color.WHITE,
+            1050,
+            Align.left,
+            true
+        );
+        font.draw(batch, specialAbilityLayout, 700, 465);
+        // Class abilities
+        font.setColor(Color.GOLD);
+        font.draw(batch, "CLASS ABILITIES", 700, 390);
+        // Display abilities in two columns
+        int abilityCount = player.getCharacterClass().getAbilities().size();
+        for (int i = 0; i < abilityCount; i++) {
+            Ability ability = player.getCharacterClass().getAbilities().get(i);
+            // Determine the ability's column and row
+            int column = i % 2;
+            int row = i / 2;
+            float x = 700 + column * 450;
+            float y = 330 - row * 100;
+            // Ability name
+            font.setColor(Color.GOLD);
+            font.draw(batch, ability.getName(), x, y);
+            // Ability effects
+            String effect = "";
+            if (ability.getDamage() > 0) {
+                effect += "Damage: " + ability.getDamage() + "  ";
+            }
+            if (ability.getBlock() > 0) {
+                effect += "Block: " + ability.getBlock() + "  ";
+            }
+            if (ability.getHeal() > 0) {
+                effect += "Healing: " + ability.getHeal() + "  ";
+            }
+            if (ability.getCooldown() > 0) {
+                effect += "Cooldown: " + ability.getCooldown();
+            }
+            font.setColor(Color.WHITE);
+            GlyphLayout effectLayout = new GlyphLayout();
+            effectLayout.setText(
+                font,
+                effect,
+                Color.WHITE,
+                480,
+                Align.left,
+                true
+            );
+            font.draw(batch, effectLayout, x, y - 35);
+        }
+        // Begin adventure button
+        beginAdventureButton.draw(batch);
+        // Restore original font size
+        font.getData().setScale(3f);
+        font.setColor(Color.WHITE);
     }
 
     private void startCombat(Enemy enemy) {
@@ -376,6 +477,11 @@ public class Main extends ApplicationAdapter {
         // ---------- LOGIC ----------
         if (characterCreation) {
             updateCharacterCreation();
+        } else if (characterOverview){
+            if (beginAdventureButton.update(viewport)) {
+                characterOverview = false;
+                inGame = true;
+            }
         } else if (!inGame) {
             if (newGameButton.update(viewport)) {
                 characterCreation = true;
@@ -426,7 +532,9 @@ public class Main extends ApplicationAdapter {
         if (characterCreation) {
             batch.draw(gameBackground, 0, 0, 1920, 1080);
             drawCharacterCreation();
-        } else if (!inGame) {
+        } else if (characterOverview){
+            drawCharacterOverview();
+        }else if (!inGame) {
             batch.draw(image, 0, 0, 1920, 1080);
             newGameButton.draw(batch);
             loadGameButton.draw(batch);
